@@ -16,6 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    # we need to install these dependencies, as per https://github.com/FyroxEngine/Fyrox/issues/269
     - name: Install deps
       run: sudo apt install libxcb-shape0-dev libxcb-xfixes0-dev libxcb1-dev libxkbcommon-dev libasound2-dev
     - name: Run tests
