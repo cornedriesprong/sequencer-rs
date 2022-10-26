@@ -9,4 +9,5 @@ edition = "2021"
 lazy_static = "^1.4.0"
 cpal = "0.14.*"
 rusty_link = "^0.3.3"
-
+round = "0.1.0"
+float_extras = "0.1.6"

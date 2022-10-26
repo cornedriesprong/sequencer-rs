@@ -10,6 +10,7 @@ use std::sync::{
 
 mod audio_engine;
 mod audio_platform_cpal;
+mod sequencer;
 
 pub struct State {
     pub link: AblLink,
@@ -70,3 +71,4 @@ fn main() {
         print_state(&mut state);
     }
 }
+
