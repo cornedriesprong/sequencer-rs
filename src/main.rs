@@ -1,12 +1,11 @@
 use crate::{
-    audio_engine::{ AudioEngine, UpdateSessionState }, audio_platform_cpal::AudioPlatformCpal
+    audio_engine::{AudioEngine, UpdateSessionState},
+    audio_platform_cpal::AudioPlatformCpal,
 };
 
 use rusty_link::{AblLink, SessionState};
 
-use std::sync::{
-    mpsc, Arc, Mutex,
-};
+use std::sync::{mpsc, Arc, Mutex};
 
 mod audio_engine;
 mod audio_platform_cpal;
@@ -40,7 +39,9 @@ impl State {
 
 fn print_state(state: &mut State) {
     //let time = state.link.clock_micros();
-    state.link.set_tempo_callback(|tempo| println!("tempo: {}", tempo));
+    state
+        .link
+        .set_tempo_callback(|tempo| println!("tempo: {}", tempo));
 }
 
 #[macro_use]
@@ -71,4 +72,3 @@ fn main() {
         print_state(&mut state);
     }
 }
-

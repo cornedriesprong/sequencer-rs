@@ -59,19 +59,24 @@ impl Sequencer {
 
     pub fn render_timeline(&self, beat_position: f64) {
         for sequence in &self.sequences {
-            let buffer_start_time =
-                Self::mod_position(beat_position, sequence.length, &self.config);
-            println!("buffer_start_time: {}", buffer_start_time);
+            let buffer_start_time = Self::mod_position(self, beat_position, sequence.length);
+            let length_in_samples = Self::beat_to_samples(self, sequence.length);
+            let buffer_end_time =
+                (buffer_start_time + self.config.buffer_size as f64) % length_in_samples;
+
+            println!("buffer start time: {}", buffer_start_time);
+            println!("length in samples: {}", length_in_samples);
+            println!("buffer end time: {}", buffer_end_time);
         }
     }
 
-    fn beat_to_samples(beat: f64, tempo: f64, sample_rate: u64) -> f64 {
-        beat / tempo * 60. * sample_rate as f64
+    fn beat_to_samples(&self, beat: f64) -> f64 {
+        beat / &self.config.tempo * 60. * &(self.config.sample_rate as f64)
     }
 
-    fn mod_position(beat: f64, length: f64, config: &SequencerConfig) -> f64 {
-        let position_in_samples = Self::beat_to_samples(beat, config.tempo, config.sample_rate);
-        let length_in_samples = Self::beat_to_samples(length, config.tempo, config.sample_rate);
+    fn mod_position(&self, beat: f64, length: f64) -> f64 {
+        let position_in_samples = Self::beat_to_samples(self, beat);
+        let length_in_samples = Self::beat_to_samples(self, length);
         position_in_samples % length_in_samples
     }
 
@@ -95,13 +100,25 @@ mod tests {
 
     #[test]
     fn beat_to_samples_zero() {
-        let result = Sequencer::beat_to_samples(0., 120., 48000);
+        let config = SequencerConfig {
+            tempo: 120.,
+            sample_rate: 44100,
+            buffer_size: 512,
+        };
+        let sequencer = Sequencer::new(config);
+        let result = sequencer.beat_to_samples(0.);
         assert_eq!(result, 0.);
     }
 
     #[test]
     fn beat_to_samples_one() {
-        let result = Sequencer::beat_to_samples(1., 120., 44100);
+        let config = SequencerConfig {
+            tempo: 120.,
+            sample_rate: 44100,
+            buffer_size: 512,
+        };
+        let sequencer = Sequencer::new(config);
+        let result = sequencer.beat_to_samples(1.);
         assert_eq!(result, 22050.);
     }
 
@@ -112,7 +129,8 @@ mod tests {
             sample_rate: 44100,
             buffer_size: 1024,
         };
-        let result = Sequencer::mod_position(0., 1., &config);
+        let sequencer = Sequencer::new(config);
+        let result = sequencer.mod_position(0., 1.);
         assert_eq!(result, 0.);
     }
 
@@ -123,7 +141,8 @@ mod tests {
             sample_rate: 44100,
             buffer_size: 1024,
         };
-        let result = Sequencer::mod_position(1., 1., &config);
+        let sequencer = Sequencer::new(config);
+        let result = sequencer.mod_position(0., 1.);
         assert_eq!(result, 0.);
     }
 
@@ -134,7 +153,8 @@ mod tests {
             sample_rate: 44100,
             buffer_size: 1024,
         };
-        let result = Sequencer::mod_position(1., 2., &config);
+        let sequencer = Sequencer::new(config);
+        let result = sequencer.mod_position(1., 2.);
         assert_eq!(result, 22050.);
     }
 

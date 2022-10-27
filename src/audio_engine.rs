@@ -29,7 +29,8 @@ impl AudioEngine {
         let mut audio_session_state = SessionState::new();
         link.capture_audio_session_state(&mut audio_session_state);
 
-        let config = SequencerConfig::new(120., 48000, 512);
+        // TODO: get actual buffer size and sample time from cpal, and sync tempo with Link
+        let config = SequencerConfig::new(120., 44100, 512);
         let sequencer = Sequencer::new(config);
 
         // define audio callback
