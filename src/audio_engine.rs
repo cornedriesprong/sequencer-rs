@@ -1,11 +1,12 @@
 use crate::audio_platform_cpal::AudioPlatformCpal;
-use crate::sequencer::{Sequencer, SequencerConfig};
+use crate::sequencer::{Sequencer, SequencerConfig, SequencerEvent};
 use cpal::Stream;
 use rusty_link::{AblLink, HostTimeFilter, SessionState};
 use std::{
     sync::{mpsc::Receiver, Arc, Mutex},
     time::Duration,
 };
+use wmidi::MidiMessage;
 
 pub struct AudioEngine {
     pub stream: Stream,
@@ -50,8 +51,12 @@ impl AudioEngine {
             }
 
             let beat_position = audio_session_state.beat_at_time(link.clock_micros(), 4.);
-            // let mut midi = Vec::new();
-            sequencer.render_timeline(beat_position);
+            let mut midi: Vec<SequencerEvent> = Vec::new();
+            sequencer.render_timeline(beat_position, &mut midi);
+
+            for event in midi.iter() {
+                println!("{:?}", event);
+            }
 
             // return buffer
             buffer

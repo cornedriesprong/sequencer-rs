@@ -23,7 +23,7 @@ impl SequencerConfig {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SequencerEvent<'a> {
     timestamp: f64,
     message: MidiMessage<'a>,
@@ -77,7 +77,7 @@ impl<'a> Sequencer<'a> {
         Self { config, sequences }
     }
 
-    pub fn render_timeline(&self, beat_position: f64) {
+    pub fn render_timeline(&self, beat_position: f64, midi: &mut Vec<SequencerEvent<'a>>) {
         for sequence in &self.sequences {
             let buffer_start_time = Self::mod_position(self, beat_position, sequence.length);
             let length_in_samples = Self::beat_to_samples(self, sequence.length);
@@ -92,6 +92,8 @@ impl<'a> Sequencer<'a> {
                     event_offset >= buffer_start_time && event_offset <= buffer_end_time;
 
                 if is_in_buffer {
+                    midi.push(event.clone());
+
                     match event.message {
                         MidiMessage::NoteOn(_, note, velocity) => {
                             println!("note on {} with velocity {:?}", note, velocity)
