@@ -1,8 +1,11 @@
 use float_extras::f64::modf;
+use wmidi::{Channel, MidiMessage, Note, U7};
 
 const SEQUENCE_COUNT: usize = 8;
 const MAX_EVENT_COUNT: usize = 2048;
 const PPQ: i32 = 96; // pulses per quarter note
+const NOTE_ON: u8 = 0x90;
+const NOTE_OFF: u8 = 0x80;
 
 pub struct SequencerConfig {
     tempo: f64,
@@ -20,39 +23,56 @@ impl SequencerConfig {
     }
 }
 
-#[derive(Copy, Clone)]
-struct MIDIEvent {
-    time: f64,
-    note: u8,
-    velocity: u8,
+#[derive(Clone)]
+pub struct SequencerEvent<'a> {
+    timestamp: f64,
+    message: MidiMessage<'a>,
 }
 
 #[derive(Clone)]
-struct MIDISequence {
+struct MIDISequence<'a> {
     length: f64,
-    events: Vec<MIDIEvent>,
+    events: Vec<SequencerEvent<'a>>,
 }
 
-impl MIDISequence {
-    pub fn new(length: f64) -> MIDISequence {
+impl<'a> MIDISequence<'a> {
+    pub fn new(length: f64) -> MIDISequence<'a> {
         MIDISequence {
             length,
             events: Vec::new(),
         }
     }
+
+    pub fn add_event(&mut self, event: SequencerEvent<'a>) {
+        self.events.push(event);
+    }
 }
 
-pub struct Sequencer {
+pub struct Sequencer<'a> {
     config: SequencerConfig,
-    sequences: Vec<MIDISequence>,
+    sequences: Vec<MIDISequence<'a>>,
 }
 
-impl Sequencer {
+impl<'a> Sequencer<'a> {
     pub fn new(config: SequencerConfig) -> Self {
         let mut sequences = Vec::new();
-        for _ in 0..SEQUENCE_COUNT {
-            sequences.push(MIDISequence::new(8.));
-        }
+        let mut sequence = MIDISequence::new(4.);
+
+        let note_on = MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100));
+        let event1 = SequencerEvent {
+            timestamp: 0.5,
+            message: note_on,
+        };
+        sequence.add_event(event1);
+
+        let note_off = MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0));
+        let event2 = SequencerEvent {
+            timestamp: 1.0,
+            message: note_off,
+        };
+        sequence.add_event(event2);
+
+        sequences.push(sequence);
 
         Self { config, sequences }
     }
@@ -64,9 +84,25 @@ impl Sequencer {
             let buffer_end_time =
                 (buffer_start_time + self.config.buffer_size as f64) % length_in_samples;
 
-            println!("buffer start time: {}", buffer_start_time);
-            println!("length in samples: {}", length_in_samples);
-            println!("buffer end time: {}", buffer_end_time);
+            for event in &sequence.events {
+                // offset in samples from beginning of buffer
+                let event_offset = Self::beat_to_samples(self, event.timestamp);
+                // determine if the event should occur in the current buffer
+                let is_in_buffer =
+                    event_offset >= buffer_start_time && event_offset <= buffer_end_time;
+
+                if is_in_buffer {
+                    match event.message {
+                        MidiMessage::NoteOn(_, note, velocity) => {
+                            println!("note on {} with velocity {:?}", note, velocity)
+                        }
+                        MidiMessage::NoteOff(_, note, velocity) => {
+                            println!("note off {} with velocity {:?}", note, velocity)
+                        }
+                        _ => println!("unknown item"),
+                    }
+                }
+            }
         }
     }
 

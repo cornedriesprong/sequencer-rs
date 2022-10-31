@@ -49,8 +49,9 @@ impl AudioEngine {
                 }
             }
 
-            let beat = audio_session_state.beat_at_time(link.clock_micros(), 4.) as i32;
-            sequencer.render_timeline(beat as f64);
+            let beat_position = audio_session_state.beat_at_time(link.clock_micros(), 4.);
+            // let mut midi = Vec::new();
+            sequencer.render_timeline(beat_position);
 
             // return buffer
             buffer
