@@ -29,6 +29,12 @@ pub struct SequencerEvent<'a> {
     message: MidiMessage<'a>,
 }
 
+impl<'a> SequencerEvent<'a> {
+    pub fn message(&self) -> &MidiMessage {
+        &self.message
+    }
+}
+
 #[derive(Clone)]
 struct MIDISequence<'a> {
     length: f64,
@@ -58,19 +64,75 @@ impl<'a> Sequencer<'a> {
         let mut sequences = Vec::new();
         let mut sequence = MIDISequence::new(4.);
 
-        let note_on = MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100));
         let event1 = SequencerEvent {
-            timestamp: 0.5,
-            message: note_on,
+            timestamp: 0.1,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event1);
 
-        let note_off = MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0));
         let event2 = SequencerEvent {
-            timestamp: 1.0,
-            message: note_off,
+            timestamp: 0.1,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event2);
+
+        let event3 = SequencerEvent {
+            timestamp: 0.2,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event3);
+
+        let event4 = SequencerEvent {
+            timestamp: 0.3,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event4);
+        let event5 = SequencerEvent {
+            timestamp: 0.4,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event5);
+
+        let event6 = SequencerEvent {
+            timestamp: 0.5,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event6);
+
+        let event7 = SequencerEvent {
+            timestamp: 0.6,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event7);
+
+        let event8 = SequencerEvent {
+            timestamp: 0.7,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event8);
+        let event9 = SequencerEvent {
+            timestamp: 0.8,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event9);
+
+        let event10 = SequencerEvent {
+            timestamp: 0.9,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event10);
+
+        let event11 = SequencerEvent {
+            timestamp: 0.10,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event11);
+
+        let event12 = SequencerEvent {
+            timestamp: 0.11,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event12);
 
         sequences.push(sequence);
 
@@ -94,15 +156,6 @@ impl<'a> Sequencer<'a> {
                 if is_in_buffer {
                     midi.push(event.clone());
 
-                    match event.message {
-                        MidiMessage::NoteOn(_, note, velocity) => {
-                            println!("note on {} with velocity {:?}", note, velocity)
-                        }
-                        MidiMessage::NoteOff(_, note, velocity) => {
-                            println!("note off {} with velocity {:?}", note, velocity)
-                        }
-                        _ => println!("unknown item"),
-                    }
                 }
             }
         }

@@ -1,21 +1,26 @@
 use crate::audio_platform_cpal::AudioPlatformCpal;
 use crate::sequencer::{Sequencer, SequencerConfig, SequencerEvent};
+use coremidi::{Client, Destination, Destinations, EventBuffer, PacketBuffer, Protocol};
 use cpal::Stream;
 use rusty_link::{AblLink, HostTimeFilter, SessionState};
+use std::thread::sleep;
 use std::{
     sync::{mpsc::Receiver, Arc, Mutex},
     time::Duration,
 };
 use wmidi::MidiMessage;
 
-pub struct AudioEngine {
-    pub stream: Stream,
-}
+const NOTE_ON: u8 = 0x90;
+const NOTE_OFF: u8 = 0x80;
 
 pub enum UpdateSessionState {
     TempoPlus,
     TempoMinus,
     TogglePlaying,
+}
+
+pub struct AudioEngine {
+    pub stream: Stream,
 }
 
 impl AudioEngine {
@@ -25,13 +30,13 @@ impl AudioEngine {
         input: Receiver<UpdateSessionState>,
         quantum: Arc<Mutex<f64>>,
     ) -> Self {
-        let mut prev_beat: i32 = -1;
-        let mut host_time_filter = HostTimeFilter::new();
+        //let prev_beat: i32 = -1;
+        //let host_time_filter = HostTimeFilter::new();
         let mut audio_session_state = SessionState::new();
         link.capture_audio_session_state(&mut audio_session_state);
 
         // TODO: get actual buffer size and sample time from cpal, and sync tempo with Link
-        let config = SequencerConfig::new(120., 44100, 512);
+        let config = SequencerConfig::new(200., 44100, 512);
         let sequencer = Sequencer::new(config);
 
         // define audio callback
@@ -51,14 +56,33 @@ impl AudioEngine {
             }
 
             let beat_position = audio_session_state.beat_at_time(link.clock_micros(), 4.);
-            let mut midi: Vec<SequencerEvent> = Vec::new();
+            // TODO: make sure we don't exceed capacity
+            let mut midi: Vec<SequencerEvent> = Vec::with_capacity(10);
             sequencer.render_timeline(beat_position, &mut midi);
 
+            let destination_index = 0;
+            let destination = Destination::from_index(destination_index).unwrap();
+            let client = Client::new("sequencer-rs").unwrap();
+            let output_port = client.output_port("sequencer-rs-midiout").unwrap();
+            let timestamp = 0;
+
             for event in midi.iter() {
-                println!("{:?}", event);
+                let message = event.message();
+                match message {
+                    MidiMessage::NoteOn(_, note, velocity) => {
+                        let data = [NOTE_ON, u8::from(*note), u8::from(*velocity)];
+                        let p = PacketBuffer::new(timestamp, &data);
+                        output_port.send(&destination, &p).unwrap();                   
+                    },
+                    MidiMessage::NoteOff(_, note, _) => {
+                        let data = [NOTE_OFF, u8::from(*note), 0];
+                        let p = PacketBuffer::new(timestamp, &data);
+                        output_port.send(&destination, &p).unwrap();                   
+                    },
+                    _ => println!("unknown item"),
+                }
             }
 
-            // return buffer
             buffer
         };
 
@@ -68,3 +92,4 @@ impl AudioEngine {
         Self { stream }
     }
 }
+
