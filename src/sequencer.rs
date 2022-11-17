@@ -206,7 +206,7 @@ impl<'a> Sequencer<'a> {
                 // TODO: add loop around logic
 
                 let mut offset;
-                offset = if event_offset == 0. { buffer_start_time } else { event_offset - buffer_start_time };
+                offset = if event_offset == 0. { buffer_start_time } else {};
                 if loops_around {
                     println!("LOOP!!!!!!!!!!!!!!!!!");
                     let loop_restart_in_buffer = loop_length_in_samples - buffer_start_time;
@@ -221,7 +221,7 @@ impl<'a> Sequencer<'a> {
                     println!("-----------------------");
 
                     let midi_event = MidiEvent {
-                        offset,
+                        offset: event_offset - buffer_start_time,
                         message: event.message.clone(),
                     };
                     midi.push(midi_event);
