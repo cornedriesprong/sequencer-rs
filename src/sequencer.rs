@@ -10,11 +10,11 @@ const NOTE_OFF: u8 = 0x80;
 pub struct SequencerConfig {
     tempo: f64,
     sample_rate: u64,
-    buffer_size: usize,
+    buffer_size: f64,
 }
 
 impl SequencerConfig {
-    pub fn new(tempo: f64, sample_rate: u64, buffer_size: usize) -> Self {
+    pub fn new(tempo: f64, sample_rate: u64, buffer_size: f64) -> Self {
         Self {
             tempo,
             sample_rate,
@@ -29,7 +29,18 @@ pub struct SequencerEvent<'a> {
     message: MidiMessage<'a>,
 }
 
-impl<'a> SequencerEvent<'a> {
+#[derive(Clone, Debug)]
+pub struct MidiEvent<'a> {
+    offset: f64,
+    message: MidiMessage<'a>,
+}
+
+impl<'a> MidiEvent<'a> {
+
+    pub fn offset(&self) -> f64 {
+        self.offset
+    }
+
     pub fn message(&self) -> &MidiMessage {
         &self.message
     }
@@ -62,99 +73,158 @@ pub struct Sequencer<'a> {
 impl<'a> Sequencer<'a> {
     pub fn new(config: SequencerConfig) -> Self {
         let mut sequences = Vec::new();
-        let mut sequence = MIDISequence::new(4.);
+        let mut sequence = MIDISequence::new(1.);
+
+        let fr = 1.0 / 16.;
 
         let event1 = SequencerEvent {
-            timestamp: 0.1,
+            timestamp: 0.,
             message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event1);
 
         let event2 = SequencerEvent {
-            timestamp: 0.1,
+            timestamp: fr,
             message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event2);
 
         let event3 = SequencerEvent {
-            timestamp: 0.2,
+            timestamp: fr * 2.,
             message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event3);
 
         let event4 = SequencerEvent {
-            timestamp: 0.3,
+            timestamp: fr * 3.,
             message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event4);
+
         let event5 = SequencerEvent {
-            timestamp: 0.4,
+            timestamp: fr * 4.,
             message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event5);
 
         let event6 = SequencerEvent {
-            timestamp: 0.5,
+            timestamp: fr * 5.,
             message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event6);
 
         let event7 = SequencerEvent {
-            timestamp: 0.6,
+            timestamp: fr * 6.,
             message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event7);
 
         let event8 = SequencerEvent {
-            timestamp: 0.7,
+            timestamp: fr * 7.,
             message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event8);
+
         let event9 = SequencerEvent {
-            timestamp: 0.8,
+            timestamp: fr * 8.,
             message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event9);
 
         let event10 = SequencerEvent {
-            timestamp: 0.9,
+            timestamp: fr * 9.,
             message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event10);
 
         let event11 = SequencerEvent {
-            timestamp: 0.10,
+            timestamp: fr * 10.,
             message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
         };
         sequence.add_event(event11);
 
         let event12 = SequencerEvent {
-            timestamp: 0.11,
+            timestamp: fr * 11.,
             message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
         };
         sequence.add_event(event12);
+
+        let event13 = SequencerEvent {
+            timestamp: fr * 12.,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event13);
+
+        let event14 = SequencerEvent {
+            timestamp: fr * 13.,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event14);
+
+        let event15 = SequencerEvent {
+            timestamp: fr * 14.,
+            message: MidiMessage::NoteOn(Channel::Ch1, Note::C4, U7::from_u8_lossy(100)),
+        };
+        sequence.add_event(event15);
+
+        let event16 = SequencerEvent {
+            timestamp: fr * 15.,
+            message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        };
+        sequence.add_event(event16);
+
+        //let event17 = SequencerEvent {
+            //timestamp: fr * 16.,
+            //message: MidiMessage::NoteOff(Channel::Ch1, Note::C4, U7::from_u8_lossy(0)),
+        //};
+        //sequence.add_event(event17);
 
         sequences.push(sequence);
 
         Self { config, sequences }
     }
 
-    pub fn render_timeline(&self, beat_position: f64, midi: &mut Vec<SequencerEvent<'a>>) {
+    pub fn render_timeline(&self, now: u64, beat_position: f64, midi: &mut Vec<MidiEvent<'a>>) {
         for sequence in &self.sequences {
             let buffer_start_time = Self::mod_position(self, beat_position, sequence.length);
-            let length_in_samples = Self::beat_to_samples(self, sequence.length);
+            let loop_length_in_samples = Self::beat_to_samples(self, sequence.length);
             let buffer_end_time =
-                (buffer_start_time + self.config.buffer_size as f64) % length_in_samples;
+                (buffer_start_time + self.config.buffer_size as f64) % loop_length_in_samples;
 
+            //println!("beat position: {}", beat_position);
+            //println!("buffer start:  {}", buffer_start_time);
+            //println!("buffer end:    {}", buffer_end_time);
+            //println!("---------------");
             for event in &sequence.events {
-                // offset in samples from beginning of buffer
+                // offset in samples since beginning of buffer
                 let event_offset = Self::beat_to_samples(self, event.timestamp);
-                // determine if the event should occur in the current buffer
+                // check whether the event should occur in the current buffer
                 let is_in_buffer =
-                    event_offset >= buffer_start_time && event_offset <= buffer_end_time;
+                    event_offset >= buffer_start_time && event_offset < buffer_end_time;
+                let loops_around = (buffer_start_time + self.config.buffer_size > loop_length_in_samples) 
+                    && event_offset <= buffer_end_time;
+                // TODO: add loop around logic
 
-                if is_in_buffer {
-                    midi.push(event.clone());
+                let mut offset;
+                offset = if event_offset == 0. { buffer_start_time } else { event_offset - buffer_start_time };
+                if loops_around {
+                    println!("LOOP!!!!!!!!!!!!!!!!!");
+                    let loop_restart_in_buffer = loop_length_in_samples - buffer_start_time;
+                    println!("{}", loop_length_in_samples);
+                    offset += loop_restart_in_buffer;
+                } 
+                if is_in_buffer || loops_around {
+                    println!("buffer start  {}", buffer_start_time);
+                    println!("timestamp     {}", event.timestamp);
+                    println!("event time    {}", event_offset);
+                    println!("offset        {}", offset);
+                    println!("-----------------------");
+
+                    let midi_event = MidiEvent {
+                        offset,
+                        message: event.message.clone(),
+                    };
+                    midi.push(midi_event);
 
                 }
             }
