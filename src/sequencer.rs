@@ -187,9 +187,8 @@ impl<'a> Sequencer<'a> {
     pub fn render_timeline(&self, now: u64, beat_position: f64, midi: &mut Vec<MidiEvent<'a>>) {
         for sequence in &self.sequences {
             let buffer_start_time = Self::mod_position(self, beat_position, sequence.length);
-            let loop_length_in_samples = Self::beat_to_samples(self, sequence.length);
-            let buffer_end_time =
-                (buffer_start_time + self.config.buffer_size as f64) % loop_length_in_samples;
+            let loop_length = Self::beat_to_samples(self, sequence.length);
+            let buffer_end_time = buffer_start_time + self.config.buffer_size;
 
             //println!("beat position: {}", beat_position);
             //println!("buffer start:  {}", buffer_start_time);
@@ -201,27 +200,21 @@ impl<'a> Sequencer<'a> {
                 // check whether the event should occur in the current buffer
                 let is_in_buffer =
                     event_offset >= buffer_start_time && event_offset < buffer_end_time;
-                let loops_around = (buffer_start_time + self.config.buffer_size > loop_length_in_samples) 
-                    && event_offset <= buffer_end_time;
+                let loops_around = buffer_end_time > loop_length 
+                    && event_offset < buffer_end_time;
                 // TODO: add loop around logic
 
-                let mut offset;
-                offset = if event_offset == 0. { buffer_start_time } else {};
-                if loops_around {
-                    println!("LOOP!!!!!!!!!!!!!!!!!");
-                    let loop_restart_in_buffer = loop_length_in_samples - buffer_start_time;
-                    println!("{}", loop_length_in_samples);
-                    offset += loop_restart_in_buffer;
-                } 
-                if is_in_buffer || loops_around {
-                    println!("buffer start  {}", buffer_start_time);
-                    println!("timestamp     {}", event.timestamp);
-                    println!("event time    {}", event_offset);
-                    println!("offset        {}", offset);
-                    println!("-----------------------");
+                println!("buffer start  {}", buffer_start_time);
+                println!("timestamp     {}", event.timestamp);
+                println!("event time    {}", event_offset);
+                println!("loops around  {}", loops_around);
+                println!("-----------------------");
 
+                if is_in_buffer || loops_around {
+                    let mut offset = event_offset - buffer_start_time;
+                    if loops_around { offset +=  loop_length }
                     let midi_event = MidiEvent {
-                        offset: event_offset - buffer_start_time,
+                        offset,
                         message: event.message.clone(),
                     };
                     midi.push(midi_event);
